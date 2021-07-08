@@ -1,9 +1,10 @@
 import Joi from "joi";
 
 import CustomErrorHandler from "../services/CustomErrorHandler";
-import {User} from '../models/index';
+import {User, RefreshToken} from '../models/index';
 import bcrypt from 'bcrypt'; 
 import JwtService from '../services/JwtService';
+import { REFRESH_SECRET } from "../config/expoter";
 
 const login = {
     async login(req, res, next) {
@@ -35,14 +36,41 @@ const login = {
 
             //token
             const access_token = JwtService.sign({_id: user._id, role: user.role})
+            const refresh_token = JwtService.sign({_id: user._id, role: user.role}, '1y', REFRESH_SECRET)
 
-            res.json({access_token})
+            //database whitelist
+            await RefreshToken.create({token: refresh_token})
+            res.json({access_token, refresh_token})
 
           }catch(err){
             return next(err);
           }
 
+    },
+
+    async logout(req, res, next){
+      //validate
+      const refreshSchema = Joi.object({
+        refresh_token : Joi.string().required(),
+        
+       });
+
+       const {error} = refreshSchema.validate(req.body);
+
+       if (error) {
+         return next(error);
+     }
+
+
+      try{
+        await RefreshToken.deleteOne({token: req.body.refresh_token})
+      }catch(err){
+        return next(err)
+      }
+
+      res.json('Logout')
     }
+
 }
 
 export default login;

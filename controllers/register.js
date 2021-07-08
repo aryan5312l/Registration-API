@@ -43,6 +43,7 @@ const register = {
         })
 
         let access_token;
+        let refresh_token;
         try{
             const result = await user.save();
             console.log(result)
